@@ -1,0 +1,36 @@
+{
+  "boasVindas": [
+    "Olá, {NOME_CLIENTE}! Sou o assistente virtual da empresa Y. Como posso te ajudar hoje?",
+    "",
+    "Por favor, digite o número de uma das opções abaixo:",
+    "1 - Como funciona",
+    "2 - Valores dos planos",
+    "3 - Benefícios",
+    "4 - Como aderir",
+    "5 - Falar com um atendente"
+  ],
+  "comoFunciona": {
+    "parte1": [
+      "Nosso serviço oferece consultas médicas 24 horas por dia, 7 dias por semana, diretamente pelo WhatsApp.",
+      "Não há carência, o que significa que você pode começar a usar nossos serviços imediatamente após a adesão."
+    ],
+    "parte2": [
+      "COMO FUNCIONA?",
+      "É muito simples. Faça seu cadastro e escolha o plano que desejar. Após o pagamento, você já terá acesso à nossa área exclusiva."
+    ]
+  },
+  "valoresPlanos": [
+    "*Plano Individual:* R$ 25,00 por mês.",
+    "*Plano Família:* R$ 45,00 por mês (até 4 pessoas)."
+  ],
+  "beneficios": [
+    "Atendimento médico ilimitado 24h por dia.",
+    "Receitas de medicamentos com desconto em farmácias parceiras."
+  ],
+  "comoAderir": [
+    "Você pode aderir aos nossos planos diretamente pelo nosso site ou, se preferir, posso te transferir para um atendente agora mesmo.",
+    "Após a adesão, o acesso é imediato."
+  ],
+  "outrasPerguntas": "Se você tiver outras dúvidas ou precisar de mais informações, por favor, fale aqui neste WhatsApp ou visite nosso site: https://site.com",
+  "linkCadastro": "Link para cadastro: https://site.com"
+}
