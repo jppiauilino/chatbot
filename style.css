@@ -1,4 +1,4 @@
-/* style.css - Versão 2.0 (PT-BR) */
+/* style.css - Versão 4.0 (PT-BR) */
 
 /* Configurações Globais */
 :root {
@@ -10,6 +10,8 @@
     --border-color: #dee2e6;
     --text-color: #212529;
     --white: #fff;
+    --toast-success: #28a745;
+    --toast-error: #dc3545;
 }
 
 body {
@@ -23,6 +25,7 @@ body {
     align-items: center;
     height: 100vh;
     box-sizing: border-box;
+    overflow: hidden;
 }
 
 .container {
@@ -38,7 +41,7 @@ body {
     box-sizing: border-box;
 }
 
-h1 {
+h1, h2 {
     text-align: center;
     color: var(--text-color);
     flex-shrink: 0;
@@ -69,24 +72,14 @@ button:hover {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-#start-stop-btn {
-    background-color: var(--primary-blue);
-    color: var(--white);
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
-#start-stop-btn:hover {
-    background-color: var(--primary-blue-hover);
-}
-
-#edit-btn {
-    background-color: #6c757d;
-    color: var(--white);
-}
-
-#exit-btn {
-    background-color: var(--danger-red);
-    color: var(--white);
-}
+#start-stop-btn { background-color: var(--primary-blue); color: var(--white); }
+#edit-btn { background-color: #6c757d; color: var(--white); }
+#exit-btn { background-color: var(--danger-red); color: var(--white); }
 
 /* Caixa de Status e QR Code */
 .status-box {
@@ -95,23 +88,38 @@ button:hover {
     padding: 20px;
     overflow: auto;
     flex-grow: 1;
-    background-color: #2e3440; /* Fundo escuro para melhor contraste */
+    background-color: #2e3440;
     color: #d8dee9;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
 }
 
 pre {
-    white-space: pre;
+    width: 100%;
+    white-space: pre-wrap;
     font-family: "Consolas", "Courier New", monospace;
-    font-size: 12px;
-    line-height: 1.2;
+    font-size: 14px;
+    line-height: 1.4;
     margin: 0;
-    text-align: center;
+    text-align: left;
 }
 
-/* Editor de Mensagens */
+#qrcode-container {
+    padding: 10px;
+    background-color: var(--white);
+    border-radius: 8px;
+    margin-bottom: 15px;
+    display: none;
+}
+
+#qrcode-container img {
+    display: block;
+    margin: 0 auto;
+}
+
+/* Editor Visual */
 .hidden {
     display: none;
 }
@@ -120,22 +128,90 @@ pre {
     display: flex;
     flex-direction: column;
     height: 100%;
+    overflow: hidden;
 }
 
-h2 {
-    text-align: center;
-    color: var(--text-color);
-    margin-top: 0;
-}
-
-#messages-editor {
-    width: 100%;
+.visual-editor-container {
     flex-grow: 1;
-    font-family: "Consolas", "Courier New", monospace;
-    font-size: 14px;
+    overflow-y: auto;
+    padding-right: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 20px;
+}
+
+.form-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #495057;
+}
+
+.form-group input[type="text"],
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
-    padding: 10px;
+    font-size: 14px;
     box-sizing: border-box;
-    margin-bottom: 20px;
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+/* Notificações Toast */
+#toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.toast {
+    padding: 15px 20px;
+    color: var(--white);
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateX(100%);
+    animation: slideIn 0.5s forwards, fadeOut 0.5s 4.5s forwards;
+}
+
+.toast.success {
+    background-color: var(--toast-success);
+}
+
+.toast.error {
+    background-color: var(--toast-error);
+}
+
+@keyframes slideIn {
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeOut {
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
 }

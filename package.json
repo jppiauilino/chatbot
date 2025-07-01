@@ -1,33 +1,47 @@
 {
-  "name": "chatbot-final",
-  "version": "1.0.0",
-  "description": "Painel de Controle para o ChatBot de WhatsApp.",
+  "name": "chatbot-whatsapp-painel",
+  "version": "3.0.0",
+  "description": "Painel de Controle aprimorado para o ChatBot de WhatsApp.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "dist": "electron-builder --publish always"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "whatsapp",
+    "chatbot",
+    "electron"
+  ],
+  "author": "Seu Nome",
+  "license": "MIT",
   "dependencies": {
-    "moment-timezone": "^0.5.45",
-    "qrcode-terminal": "0.12.0",
-    "whatsapp-web.js": "^1.31.0"
+    "electron-updater": "^6.1.7",
+    "qrcode": "^1.5.3",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0"
   },
   "devDependencies": {
-    "electron": "^37.1.0",
-    "electron-builder": "^24.13.3"
+    "electron": "^28.2.3",
+    "electron-builder": "^24.9.1"
   },
   "build": {
-    "appId": "com.seu-nome.chatbot",
-    "productName": "Chatbot WhatsApp",
+    "appId": "com.seunome.chatbot",
+    "productName": "Painel Chatbot",
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "build/icon.png"
     },
     "files": [
-      "**/*",
-      "!node_modules/electron-builder/**/*"
+      "**/*"
     ],
     "asarUnpack": [
       "./chatbot.js",
