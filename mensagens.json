@@ -1,0 +1,68 @@
+{
+  "boasVindas": [
+    "Bom dia, {NOME_CLIENTE}, tudo bem? Como posso te ajudar hoje?",
+    "",
+    "Por favor, digite o número de uma das opções abaixo:",
+    "1 - Conheça nossos planos",
+    "2 - Setor Financeiro",
+    "3 - Preciso de ajuda com a plataforma",
+    "4 - Quero agendar prestações de serviço"
+  ],
+  "nossosPlanos": {
+    "parte1": [
+      "*Plano Comodato Plus Completo:*",
+      "",
+      "*ACESSO 24 HORAS VIA APP*",
+      "*BLOQUEIO E DESBLOQUEIO*",
+      "*CENTRAL 24H + WHATSAPP*",
+      "*SUPORTE TÉCNICO*",
+      "*EQUIPE DE BUSCA*",
+      "",
+      "*Adesão: R$ 200,00*",
+      "*Mensal: R$ 50,00"
+      
+    ],
+    "parte2": [
+      "*Plano Comodato Premium*",
+      "",
+      "*ACESSO 24 HORAS VIA APP*",
+      "*BLOQUEIO E DESBLOQUEIO*",
+      "*CENTRAL 24H + WHATSAPP*",
+      "*SUPORTE TÉCNICO*",
+      "*EQUIPE DE BUSCA*",
+      "*ANTIFURTO VIRTUAL*",
+      "*NOTIFICAÇÕES NO APP*",
+      "*HISTORICO DE POSIÇÕES*",
+      "",
+      "*Adesão: R$ 300,00*",
+      "*Mensal: R$ 50,00*"
+
+    ]
+  },
+  "setorFinanceiro": [
+    "*1- Quero efetuar meu pagamento, me envie o boleto.*",
+    "",
+    "*2- Quero enviar a foto do meu comprovante.*",
+    "",
+    "*3- Divergência em minha mensalidade.",
+    ""
+    
+  ],
+  "ajuda": [
+    "*1- Esqueci minha senha e/ou meu usuário*",
+    "",
+    "*2- Não consigo acessar a plataforma*",
+    "",
+    "*3- Veículo sem posição*",
+    "",
+    "*4- Solicitar manutenção em meu equipamento*"
+  ],
+  "agendar": [
+    "*1- Quero agendar com vocês*",
+    "",
+    "*2- Valores das prestações de serviços*",
+    "",
+    "*3- Problemas ou dúvidas sobre um agendamento*"
+  ],
+  "outros": "Entendido, aguarde alguns momentos que já iremos responder."
+}
