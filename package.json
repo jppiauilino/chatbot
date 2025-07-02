@@ -1,11 +1,12 @@
 {
   "name": "chatbot-whatsapp-painel",
-  "version": "3.3.0",
+  "version": "4.0.0",
   "description": "Painel de Controle aprimorado para o ChatBot de WhatsApp.",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder",
+    "postinstall": "npm rebuild --runtime=electron --target=28.2.3 --dist-url=https://atom.io/download/atom-shell --build-from-source"
   },
   "keywords": [
     "whatsapp",
@@ -17,12 +18,15 @@
   "dependencies": {
     "electron-updater": "^6.1.7",
     "qrcode": "^1.5.3",
-    "puppeteer": "^21.7.0",
     "whatsapp-web.js": "^1.23.0"
   },
   "devDependencies": {
     "electron": "^28.2.3",
-    "electron-builder": "^24.9.1"
+    "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9"
+  },
+  "resolutions": {
+    "puppeteer": "^21.7.0"
   },
   "build": {
     "appId": "com.seunome.chatbot",

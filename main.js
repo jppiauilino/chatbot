@@ -24,7 +24,7 @@ function loadMessages() {
         return JSON.parse(fs.readFileSync(messagesPath, 'utf8'));
     } catch (error) {
         console.error(`ERRO FATAL AO LER MENSAGENS: ${error.message}`);
-        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'. O aplicativo não pode continuar.\n\nDetalhes: ${error.message}`);
+        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'.\n\nDetalhes: ${error.message}`);
         app.quit();
         return null;
     }
@@ -76,96 +76,96 @@ async function handleAction(chat, action, contact) {
 // --- CONTROLO DO BOT ---
 
 function startBotProcess() {
-    if (isBotBusy || (client && client.pupPage)) {
-        console.log('Operação já em andamento ou bot já iniciado.');
+    if (isBotBusy) {
         return;
     }
     isBotBusy = true;
+    
     mainWindow.webContents.send('bot-status', 'starting');
     mainWindow.webContents.send('clear-output');
     mainWindow.webContents.send('bot-output', 'Iniciando o cliente do WhatsApp...\n');
 
-    const { Client, LocalAuth } = require('whatsapp-web.js');
+    try {
+        const { Client, LocalAuth } = require('whatsapp-web.js');
 
-    client = new Client({
-        authStrategy: new LocalAuth({ dataPath: path.join(app.getPath('userData'), 'wwebjs_auth') }),
-        puppeteer: {
-            headless: true,
-            // A opção executablePath foi removida para usar o Chromium empacotado
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--disable-gpu'
-            ],
-        }
-    });
-
-    client.on('qr', qr => {
-        mainWindow.webContents.send('qr-code', qr);
-    });
-
-    client.on('authenticated', () => {
-        mainWindow.webContents.send('bot-authenticated');
-    });
-    
-    client.on('ready', () => {
-        isBotBusy = false;
-        mainWindow.webContents.send('bot-status', 'iniciado');
-        mainWindow.webContents.send('bot-output', 'Bot conectado e pronto para uso.\n');
-    });
-
-    client.on('disconnected', (reason) => {
-        isBotBusy = false;
-        mainWindow.webContents.send('bot-status', 'parado');
-        mainWindow.webContents.send('bot-output', `\n>> O bot foi desconectado. Razão: ${reason} <<\n`);
-        client = null;
-    });
-
-    client.on('auth_failure', (msg) => {
-        isBotBusy = false;
-        mainWindow.webContents.send('bot-status', 'parado');
-        mainWindow.webContents.send('bot-output', `\n>> FALHA NA AUTENTICAÇÃO: ${msg} <<\n`);
-        client = null;
-    });
-    
-    client.on('message_create', async msg => {
-        if (msg.fromMe || !msg.from.endsWith('@c.us')) return;
-
-        const chat = await msg.getChat();
-        const contact = await msg.getContact();
-        const userInput = msg.body.trim().toLowerCase();
-        const currentState = userStates[msg.from] || 'boasVindas';
-        const mensagens = loadMessages();
-
-        let currentActionData = mensagens[currentState];
-        let nextAction = null;
-
-        if (currentActionData?.menu?.[userInput]) {
-            nextAction = currentActionData.menu[userInput].acao;
-        } else if (['menu', 'oi', 'olá', 'ola'].some(k => userInput.includes(k))) {
-            nextAction = 'boasVindas';
-        }
-
-        if (nextAction) {
-            await handleAction(chat, nextAction, contact);
-            const finalActionData = mensagens[nextAction];
-            if (finalActionData && !finalActionData.menu) {
-                userStates[msg.from] = 'boasVindas';
+        client = new Client({
+            authStrategy: new LocalAuth({ dataPath: path.join(app.getPath('userData'), 'wwebjs_auth') }),
+            puppeteer: {
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos essenciais para compatibilidade
             }
-        }
-    });
+        });
 
-    client.initialize().catch(err => {
-        console.error('Erro na inicialização do cliente:', err);
-        mainWindow.webContents.send('bot-output', `\n>> ERRO GRAVE AO INICIAR: ${err.message} <<\n`);
+        client.on('qr', qr => {
+            mainWindow.webContents.send('qr-code', qr);
+        });
+
+        client.on('authenticated', () => {
+            mainWindow.webContents.send('bot-authenticated');
+        });
+        
+        client.on('ready', () => {
+            isBotBusy = false;
+            mainWindow.webContents.send('bot-status', 'iniciado');
+            mainWindow.webContents.send('bot-output', 'Bot conectado e pronto para uso.\n');
+        });
+
+        client.on('disconnected', (reason) => {
+            isBotBusy = false;
+            mainWindow.webContents.send('bot-status', 'parado');
+            mainWindow.webContents.send('bot-output', `\n>> O bot foi desconectado. Razão: ${reason} <<\n`);
+            client = null;
+        });
+
+        client.on('auth_failure', (msg) => {
+            isBotBusy = false;
+            mainWindow.webContents.send('bot-status', 'parado');
+            mainWindow.webContents.send('bot-output', `\n>> FALHA NA AUTENTICAÇÃO: ${msg} <<\n`);
+            client = null;
+        });
+        
+        client.on('message_create', async msg => {
+            if (msg.fromMe || !msg.from.endsWith('@c.us')) return;
+
+            const chat = await msg.getChat();
+            const contact = await msg.getContact();
+            const userInput = msg.body.trim().toLowerCase();
+            const currentState = userStates[msg.from] || 'boasVindas';
+            const mensagens = loadMessages();
+
+            let currentActionData = mensagens[currentState];
+            let nextAction = null;
+
+            if (currentActionData?.menu?.[userInput]) {
+                nextAction = currentActionData.menu[userInput].acao;
+            } else if (['menu', 'oi', 'olá', 'ola'].some(k => userInput.includes(k))) {
+                nextAction = 'boasVindas';
+            }
+
+            if (nextAction) {
+                await handleAction(chat, nextAction, contact);
+                const finalActionData = mensagens[nextAction];
+                if (finalActionData && !finalActionData.menu) {
+                    userStates[msg.from] = 'boasVindas';
+                }
+            }
+        });
+
+        mainWindow.webContents.send('bot-output', 'Inicializando conexão com o WhatsApp...\n');
+        client.initialize().catch(err => {
+            console.error('Erro no client.initialize:', err);
+            mainWindow.webContents.send('bot-output', `\n>> ERRO GRAVE AO INICIAR: ${err.message} <<\n`);
+            mainWindow.webContents.send('bot-status', 'parado');
+            isBotBusy = false;
+            client = null;
+        });
+
+    } catch (err) {
+        console.error('Erro crítico no bloco startBotProcess:', err);
+        mainWindow.webContents.send('bot-output', `\n>> ERRO CRÍTICO NO ARRANQUE: ${err.message} <<\n`);
         mainWindow.webContents.send('bot-status', 'parado');
         isBotBusy = false;
-        client = null;
-    });
+    }
 }
 
 async function stopBotProcess() {
