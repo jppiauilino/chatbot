@@ -1,4 +1,4 @@
-/* style.css - Versão 4.0 (PT-BR) */
+/* style.css - Versão 5.0 (UI de Edição Melhorada) */
 
 /* Configurações Globais */
 :root {
@@ -30,7 +30,7 @@ body {
 
 .container {
     width: 95%;
-    max-width: 800px;
+    max-width: 900px; /* Aumentado para melhor visualização do editor */
     height: 95%;
     display: flex;
     flex-direction: column;
@@ -48,8 +48,14 @@ h1, h2 {
     margin-top: 0;
 }
 
-/* Controles e Botões */
-.main-controls, .editor-controls {
+/* --- Visão Principal --- */
+#main-view {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.main-controls {
     display: flex;
     justify-content: center;
     gap: 15px;
@@ -81,7 +87,6 @@ button:disabled {
 #edit-btn { background-color: #6c757d; color: var(--white); }
 #exit-btn { background-color: var(--danger-red); color: var(--white); }
 
-/* Caixa de Status e QR Code */
 .status-box {
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -119,36 +124,78 @@ pre {
     margin: 0 auto;
 }
 
-/* Editor Visual */
+
+/* --- Editor de Mensagens --- */
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 #editor-view {
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow: hidden;
+    width: 100%;
 }
 
-.visual-editor-container {
+.editor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.editor-header h2 {
+    margin: 0;
+}
+
+.editor-controls {
+    display: flex;
+    gap: 15px;
+}
+
+.editor-body {
+    display: flex;
     flex-grow: 1;
-    overflow-y: auto;
-    padding-right: 15px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    padding: 20px;
+    overflow: hidden; /* Garante que os filhos não ultrapassem as bordas */
+}
+
+#editor-nav {
+    flex: 0 0 220px;
+    background-color: #f8f9fa;
+    padding: 15px 0;
+    border-right: 1px solid var(--border-color);
+    overflow-y: auto;
+}
+
+.nav-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    border-left: 3px solid transparent;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.nav-item:hover {
+    background-color: #e9ecef;
+}
+
+.nav-item.active {
+    background-color: #e9ecef;
+    border-left-color: var(--primary-blue);
+    font-weight: 700;
+}
+
+#editor-content {
+    flex-grow: 1;
+    padding: 25px;
+    overflow-y: auto;
 }
 
 .form-group {
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e9ecef;
-    padding-bottom: 20px;
-}
-
-.form-group:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
+    margin-bottom: 25px;
 }
 
 .form-group label {
@@ -156,24 +203,29 @@ pre {
     font-weight: 600;
     margin-bottom: 8px;
     color: #495057;
+    font-size: 1.1em;
 }
 
-.form-group input[type="text"],
+.form-group p.description {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: -5px;
+    margin-bottom: 10px;
+}
+
 .form-group textarea {
     width: 100%;
-    padding: 10px;
+    padding: 12px;
     border: 1px solid var(--border-color);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 14px;
     box-sizing: border-box;
-}
-
-.form-group textarea {
-    min-height: 120px;
+    min-height: 150px;
     resize: vertical;
 }
 
-/* Notificações Toast */
+
+/* --- Notificações Toast --- */
 #toast-container {
     position: fixed;
     top: 20px;
@@ -194,24 +246,8 @@ pre {
     animation: slideIn 0.5s forwards, fadeOut 0.5s 4.5s forwards;
 }
 
-.toast.success {
-    background-color: var(--toast-success);
-}
+.toast.success { background-color: var(--toast-success); }
+.toast.error { background-color: var(--toast-error); }
 
-.toast.error {
-    background-color: var(--toast-error);
-}
-
-@keyframes slideIn {
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        transform: translateX(100%);
-    }
-}
+@keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
+@keyframes fadeOut { to { opacity: 0; transform: translateX(100%); } }

@@ -8,11 +8,14 @@ const editBtn = document.getElementById('edit-btn');
 const exitBtn = document.getElementById('exit-btn');
 const mainView = document.getElementById('main-view');
 const editorView = document.getElementById('editor-view');
-const visualEditorContainer = document.getElementById('visual-editor');
+const editorNav = document.getElementById('editor-nav');
+const editorContent = document.getElementById('editor-content');
 const saveBtn = document.getElementById('save-btn');
 const cancelBtn = document.getElementById('cancel-btn');
 const qrcodeContainer = document.getElementById('qrcode-container');
 const toastContainer = document.getElementById('toast-container');
+
+let originalMessages = {};
 
 // --- Funções Auxiliares ---
 
@@ -42,103 +45,153 @@ function showToast(message, type = 'success') {
     }, 5000);
 }
 
-// --- Editor Visual ---
+// --- Editor Visual (Versão Final) ---
 
-function createFormGroup(key, value) {
-    const group = document.createElement('div');
-    group.className = 'form-group';
-    
-    const label = document.createElement('label');
-    label.textContent = key.replace(/_/g, ' '); // Formata o nome para exibição
-    label.htmlFor = `editor-${key}`;
-    group.appendChild(label);
-
-    const content = Array.isArray(value) ? value.join('\n') : value;
-    const textarea = document.createElement('textarea');
-    textarea.id = `editor-${key}`;
-    textarea.dataset.key = key;
-    textarea.value = content;
-    group.appendChild(textarea);
-    
-    return group;
+/**
+ * Converte uma chave de objeto para um título legível.
+ */
+function formatLabel(key) {
+    return key
+        .replace(/_/g, ' ')
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
 }
 
-function populateVisualEditor(messages) {
-    visualEditorContainer.innerHTML = ''; // Limpa o editor
-    const data = JSON.parse(messages);
+/**
+ * Cria os campos de formulário para uma categoria específica.
+ * @param {HTMLElement} container - O elemento onde os campos serão inseridos.
+ * @param {object} data - O objeto de dados da categoria.
+ * @param {string} parentPath - O caminho para o objeto pai.
+ */
+function buildFormFields(container, data, parentPath) {
+    // Se a categoria tem um array 'mensagens' (como 'resposta_outros' ou 'submenu_nossosPlanos')
+    if (data.mensagens && Array.isArray(data.mensagens)) {
+        data.mensagens.forEach((msg, index) => {
+            if (msg.tipo === 'texto') {
+                const currentPath = `${parentPath}.mensagens.${index}.conteudo`;
+                const group = document.createElement('div');
+                group.className = 'form-group';
 
-    // Itera sobre as chaves principais do JSON de mensagens
-    for (const key in data) {
-        if (key === 'boasVindas') {
-            const group = createFormGroup('Mensagem de Boas Vindas', data[key].titulo);
-            visualEditorContainer.appendChild(group);
-        } else if (key.startsWith('submenu_')) {
-            const submenu = data[key];
-            if (submenu.mensagens) { // Para menus com múltiplas mensagens como "nossosPlanos"
-                const content = submenu.mensagens
-                    .filter(m => m.tipo === 'texto')
-                    .map(m => m.conteudo.join('\n'))
-                    .join('\n\n---\n\n'); // Separador visual
-                const group = createFormGroup(key, content);
-                visualEditorContainer.appendChild(group);
+                const label = document.createElement('label');
+                // Se houver mais de uma mensagem, numera os blocos
+                label.textContent = data.mensagens.length > 1 ? `Bloco de Texto ${index + 1}` : 'Conteúdo da Resposta';
+                group.appendChild(label);
+
+                const textarea = document.createElement('textarea');
+                // O conteúdo pode ser um array de strings ou uma única string
+                const contentValue = Array.isArray(msg.conteudo) ? msg.conteudo.join('\n') : msg.conteudo;
+                const isArray = Array.isArray(msg.conteudo);
+
+                textarea.value = contentValue;
+                textarea.addEventListener('input', (e) => {
+                    const newValue = isArray ? e.target.value.split('\n') : e.target.value;
+                    setNestedValue(originalMessages, currentPath, newValue);
+                });
+                group.appendChild(textarea);
+                container.appendChild(group);
             }
-        } else if (key.startsWith('resposta_')) {
-            const response = data[key].mensagens[0].conteudo;
-            const group = createFormGroup(key, response);
-            visualEditorContainer.appendChild(group);
+        });
+        return;
+    }
+
+    // Lógica para outras categorias que não têm um array 'mensagens'
+    for (const key in data) {
+        const value = data[key];
+        const currentPath = `${parentPath}.${key}`;
+
+        if (key === 'titulo' && typeof value === 'string') {
+            const group = document.createElement('div');
+            group.className = 'form-group';
+            
+            const label = document.createElement('label');
+            label.textContent = formatLabel(key);
+            group.appendChild(label);
+             
+            const desc = document.createElement('p');
+            desc.className = 'description';
+            desc.textContent = 'Mensagem principal ou título do menu.';
+            group.appendChild(desc);
+
+            const textarea = document.createElement('textarea');
+            textarea.value = value;
+            textarea.addEventListener('input', (e) => {
+                setNestedValue(originalMessages, currentPath, e.target.value);
+            });
+            group.appendChild(textarea);
+            container.appendChild(group);
         }
     }
 }
 
-function reconstructMessagesFromEditor() {
-    const newMessages = {};
-    const textareas = visualEditorContainer.querySelectorAll('textarea');
-    
-    // Recria a estrutura base do JSON (simplificado)
-    const baseStructure = JSON.parse(localStorage.getItem('baseMessagesStructure'));
-    if (!baseStructure) {
-        showToast('Erro: Estrutura base de mensagens não encontrada. Não foi possível salvar.', 'error');
-        return null;
+
+/**
+ * Define um valor em um objeto aninhado usando um caminho de string (ex: 'a.b.c').
+ */
+function setNestedValue(obj, path, value) {
+    const keys = path.split('.');
+    let current = obj;
+    for (let i = 0; i < keys.length - 1; i++) {
+        if (current[keys[i]] === undefined) return; // Caminho não existe, interrompe
+        current = current[keys[i]];
     }
+    current[keys[keys.length - 1]] = value;
+}
 
-    textareas.forEach(textarea => {
-        const key = textarea.dataset.key;
-        const value = textarea.value;
-
-        if (key === 'Mensagem de Boas Vindas') {
-            baseStructure.boasVindas.titulo = value;
-        } else if (key.startsWith('submenu_')) {
-             const messagesArray = value.split('\n\n---\n\n').map(block => ({
-                tipo: 'texto',
-                conteudo: block.split('\n')
-            }));
-            // Mantém a última parte do menu (o "voltar")
-            const originalSubmenu = baseStructure[key].mensagens;
-            const menuPart = originalSubmenu.find(m => m.tipo === 'menu');
-            baseStructure[key].mensagens = [...messagesArray, menuPart];
-
-        } else if (key.startsWith('resposta_')) {
-            baseStructure[key].mensagens[0].conteudo = value;
-        }
+/**
+ * Exibe o formulário para a categoria selecionada.
+ */
+function displayCategoryForm(categoryKey) {
+    editorContent.innerHTML = '';
+    
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.key === categoryKey);
     });
 
-    return JSON.stringify(baseStructure, null, 2);
+    const categoryData = originalMessages[categoryKey];
+    if (categoryData) {
+        buildFormFields(editorContent, categoryData, categoryKey);
+    }
 }
 
+/**
+ * Popula o menu de navegação e exibe o primeiro formulário.
+ */
+function populateVisualEditor(messagesString) {
+    editorNav.innerHTML = '';
+    editorContent.innerHTML = '';
+    try {
+        originalMessages = JSON.parse(messagesString);
+
+        Object.keys(originalMessages).forEach(key => {
+            const navItem = document.createElement('div');
+            navItem.className = 'nav-item';
+            navItem.textContent = formatLabel(key);
+            navItem.dataset.key = key;
+            navItem.addEventListener('click', () => displayCategoryForm(key));
+            editorNav.appendChild(navItem);
+        });
+
+        if (editorNav.firstChild) {
+            displayCategoryForm(editorNav.firstChild.dataset.key);
+        }
+
+    } catch (error) {
+        showToast(`Erro ao processar o JSON de mensagens: ${error.message}`, 'error');
+        console.error(error);
+    }
+}
 
 // --- Event Listeners dos Botões ---
 
 startStopBtn.addEventListener('click', () => {
     const isBotRunning = startStopBtn.dataset.status === 'iniciado';
-    if (isBotRunning) ipcRenderer.send('stop-bot');
-    else ipcRenderer.send('start-bot');
+    ipcRenderer.send(isBotRunning ? 'stop-bot' : 'start-bot');
 });
 
 editBtn.addEventListener('click', async () => {
     try {
         const messages = await ipcRenderer.invoke('get-messages');
-        // Salva a estrutura original para reconstrução
-        localStorage.setItem('baseMessagesStructure', messages);
         populateVisualEditor(messages);
         showEditorView();
     } catch (error) {
@@ -151,19 +204,13 @@ saveBtn.addEventListener('click', async () => {
     cancelBtn.disabled = true;
     saveBtn.textContent = 'Salvando...';
 
-    const newMessagesString = reconstructMessagesFromEditor();
-    if (!newMessagesString) {
-        saveBtn.disabled = false;
-        cancelBtn.disabled = false;
-        saveBtn.textContent = 'Salvar e Reiniciar';
-        return;
-    }
-
-    const result = await ipcRenderer.invoke('save-messages', newMessagesString);
+    const newMessagesString = JSON.stringify(originalMessages, null, 2);
     
+    const result = await ipcRenderer.invoke('save-messages', newMessagesString);
+
     if (result.success) {
         showMainView();
-        showToast('Mensagens salvas com sucesso!');
+        showToast('Mensagens salvas com sucesso! O bot será reiniciado.');
     } else {
         showToast(`ERRO AO SALVAR: ${result.message}`, 'error');
     }
@@ -232,7 +279,8 @@ ipcRenderer.on('bot-status', (event, status) => {
         case 'starting':
         case 'stopping':
         case 'restarting':
-            startStopBtn.textContent = status.charAt(0).toUpperCase() + status.slice(1) + '...';
+            const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+            startStopBtn.textContent = `${statusText}...`;
             startStopBtn.style.backgroundColor = '#6c757d';
             setMainButtonsEnabled(false);
             break;

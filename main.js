@@ -6,32 +6,49 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 
 // --- VARIÁVEIS GLOBAIS ---
 let mainWindow;
-let client; 
+let client;
 let isBotBusy = false;
 
-// --- FUNÇÕES DE CAMINHO ---
-const getAssetPath = (assetName) => {
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'app.asar.unpacked', assetName);
-  }
-  return path.join(__dirname, assetName);
-};
+// --- GESTÃO DE ARQUIVOS DE CONFIGURAÇÃO ---
+const userDataPath = app.getPath('userData');
+const messagesFilePath = path.join(userDataPath, 'mensagens.json');
+
+function getPuppeteerPath() {
+    if (app.isPackaged) {
+        return path.join(process.resourcesPath, 'puppeteer', 'chrome-win', 'chrome.exe');
+    }
+    // Em desenvolvimento, use a versão do puppeteer em node_modules
+    const puppeteer = require('puppeteer');
+    return puppeteer.executablePath();
+}
+
+function ensureMessagesFileExists() {
+    if (!fs.existsSync(messagesFilePath)) {
+        const sourcePath = path.join(__dirname, 'mensagens.json');
+        try {
+            fs.copyFileSync(sourcePath, messagesFilePath);
+        } catch (error) {
+            console.error('Falha ao copiar mensagens.json inicial:', error);
+            dialog.showErrorBox('Erro Crítico', `Não foi possível criar o arquivo de configuração 'mensagens.json'.\n\nDetalhes: ${error.message}`);
+            app.quit();
+        }
+    }
+}
 
 // --- LÓGICA DO CHATBOT INTEGRADA ---
 
 function loadMessages() {
     try {
-        const messagesPath = getAssetPath('mensagens.json');
-        return JSON.parse(fs.readFileSync(messagesPath, 'utf8'));
+        return JSON.parse(fs.readFileSync(messagesFilePath, 'utf8'));
     } catch (error) {
         console.error(`ERRO FATAL AO LER MENSAGENS: ${error.message}`);
-        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'. O aplicativo não pode continuar.\n\nDetalhes: ${error.message}`);
+        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'.\n\nDetalhes: ${error.message}`);
         app.quit();
         return null;
     }
 }
 
-const userStates = {}; 
+const userStates = {};
 
 function buildMenu(menuData) {
     let menuText = menuData.titulo ? `${menuData.titulo}\n\n` : '';
@@ -81,15 +98,16 @@ function startBotProcess() {
         return;
     }
     isBotBusy = true;
-    
+
     mainWindow.webContents.send('bot-status', 'starting');
     mainWindow.webContents.send('clear-output');
     mainWindow.webContents.send('bot-output', 'Iniciando o cliente do WhatsApp...\n');
 
     try {
         client = new Client({
-            authStrategy: new LocalAuth({ dataPath: path.join(app.getPath('userData'), 'wwebjs_auth') }),
+            authStrategy: new LocalAuth({ dataPath: path.join(userDataPath, 'wwebjs_auth') }),
             puppeteer: {
+                executablePath: getPuppeteerPath(),
                 headless: true,
                 args: [
                     '--no-sandbox',
@@ -110,7 +128,7 @@ function startBotProcess() {
         client.on('authenticated', () => {
             mainWindow.webContents.send('bot-authenticated');
         });
-        
+
         client.on('ready', () => {
             isBotBusy = false;
             mainWindow.webContents.send('bot-status', 'iniciado');
@@ -130,7 +148,7 @@ function startBotProcess() {
             mainWindow.webContents.send('bot-output', `\n>> FALHA NA AUTENTICAÇÃO: ${msg} <<\n`);
             client = null;
         });
-        
+
         client.on('message_create', async msg => {
             if (msg.fromMe || !msg.from.endsWith('@c.us')) return;
 
@@ -139,6 +157,8 @@ function startBotProcess() {
             const userInput = msg.body.trim().toLowerCase();
             const currentState = userStates[msg.from] || 'boasVindas';
             const mensagens = loadMessages();
+
+            if (!mensagens) return;
 
             let currentActionData = mensagens[currentState];
             let nextAction = null;
@@ -161,6 +181,7 @@ function startBotProcess() {
         mainWindow.webContents.send('bot-output', 'Inicializando conexão com o WhatsApp...\n');
         client.initialize().catch(err => {
             console.error('Erro no client.initialize:', err);
+            dialog.showErrorBox('Erro de Inicialização', `Falha ao iniciar o cliente do WhatsApp.\n\nDetalhes: ${err.message}`);
             mainWindow.webContents.send('bot-output', `\n>> ERRO GRAVE AO INICIAR: ${err.message} <<\n`);
             mainWindow.webContents.send('bot-status', 'parado');
             isBotBusy = false;
@@ -169,6 +190,7 @@ function startBotProcess() {
 
     } catch (err) {
         console.error('Erro crítico no bloco startBotProcess:', err);
+        dialog.showErrorBox('Erro Crítico no Arranque', `Ocorreu um erro inesperado.\n\nDetalhes: ${err.message}\n\nStack: ${err.stack}`);
         mainWindow.webContents.send('bot-output', `\n>> ERRO CRÍTICO NO ARRANQUE: ${err.message} <<\n`);
         mainWindow.webContents.send('bot-status', 'parado');
         isBotBusy = false;
@@ -182,7 +204,7 @@ async function stopBotProcess() {
     mainWindow.webContents.send('bot-output', 'Desconectando o bot...\n');
     try {
         await client.destroy();
-    } catch(e) {
+    } catch (e) {
         console.error("Erro ao destruir cliente", e)
     } finally {
         isBotBusy = false;
@@ -191,7 +213,6 @@ async function stopBotProcess() {
         mainWindow.webContents.send('bot-output', 'Bot parado com sucesso.\n');
     }
 }
-
 
 // --- LÓGICA DO ELECTRON (Janela, Menu, IPC) ---
 
@@ -250,6 +271,7 @@ function createWindow() {
 }
 
 app.whenReady().then(() => {
+    ensureMessagesFileExists();
     createWindow();
     createMenu();
 });
@@ -263,26 +285,29 @@ ipcMain.on('start-bot', startBotProcess);
 ipcMain.on('stop-bot', stopBotProcess);
 
 ipcMain.handle('get-messages', async () => {
-    return fs.readFileSync(getAssetPath('mensagens.json'), 'utf8');
+    return fs.readFileSync(messagesFilePath, 'utf8');
 });
 
 ipcMain.handle('save-messages', async (event, newMessagesString) => {
     try {
-        JSON.parse(newMessagesString);
-    } catch (error) {
-        return { success: false, message: `Erro de sintaxe no JSON: ${error.message}` };
-    }
+        const parsedJSON = JSON.parse(newMessagesString);
 
-    mainWindow.webContents.send('clear-output');
-    mainWindow.webContents.send('bot-output', 'Mensagens salvas! Reiniciando o bot...\n');
-    
-    await stopBotProcess();
-    
-    fs.writeFileSync(getAssetPath('mensagens.json'), newMessagesString, 'utf8');
-    
-    startBotProcess();
-    
-    return { success: true };
+        mainWindow.webContents.send('clear-output');
+        mainWindow.webContents.send('bot-output', 'Salvando mensagens e reiniciando o bot...\n');
+
+        await stopBotProcess();
+
+        fs.writeFileSync(messagesFilePath, JSON.stringify(parsedJSON, null, 2), 'utf8');
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        startBotProcess();
+
+        return { success: true };
+    } catch (error) {
+        console.error("Erro ao salvar mensagens:", error);
+        return { success: false, message: `Erro ao salvar o arquivo: ${error.message}` };
+    }
 });
 
 ipcMain.on('exit-app', () => app.quit());

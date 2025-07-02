@@ -6,10 +6,11 @@
     <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-    <div id="toast-container"></div> <div class="container">
-        <h1>Painel de Controle do Chatbot</h1>
+    <div id="toast-container"></div>
+    <div class="container">
         
         <div id="main-view">
+            <h1>Painel de Controle do Chatbot</h1>
             <div class="main-controls">
                 <button id="start-stop-btn">▶️ Iniciar Bot</button>
                 <button id="edit-btn">✏️ Editar Respostas</button>
@@ -22,14 +23,19 @@
         </div>
 
         <div id="editor-view" class="hidden">
-            <h2>Editor de Mensagens</h2>
-            <div id="visual-editor" class="visual-editor-container">
+            <div class.editor-header>
+                 <h2>Editor de Mensagens</h2>
+                 <div class="editor-controls">
+                    <button id="save-btn">Salvar e Reiniciar</button>
+                    <button id="cancel-btn">Voltar ao Painel</button>
                 </div>
-            <div class="editor-controls">
-                <button id="save-btn">Salvar e Reiniciar</button>
-                <button id="cancel-btn">Voltar ao Painel</button>
+            </div>
+            <div class="editor-body">
+                <nav id="editor-nav"></nav>
+                <main id="editor-content"></main>
             </div>
         </div>
+        
     </div>
     <script src="./renderer.js"></script>
 </body>
