@@ -1,98 +1,192 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
-// Função para obter o caminho correto dos assets, tanto em desenvolvimento quanto empacotado
+// --- VARIÁVEIS GLOBAIS ---
+let mainWindow;
+let client; 
+let isBotBusy = false;
+
+// --- FUNÇÕES DE CAMINHO ---
 const getAssetPath = (assetName) => {
   if (app.isPackaged) {
-    // No modo empacotado, os arquivos descompactados ficam em 'app.asar.unpacked'
     return path.join(process.resourcesPath, 'app.asar.unpacked', assetName);
   }
   return path.join(__dirname, assetName);
 };
 
-let mainWindow;
-let botProcess = null;
-let isBotBusy = false; // Flag para controlar operações concorrentes
+// --- LÓGICA DO CHATBOT INTEGRADA ---
 
-// Função para iniciar o processo do bot
+function loadMessages() {
+    try {
+        const messagesPath = getAssetPath('mensagens.json');
+        return JSON.parse(fs.readFileSync(messagesPath, 'utf8'));
+    } catch (error) {
+        console.error(`ERRO FATAL AO LER MENSAGENS: ${error.message}`);
+        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'. O aplicativo não pode continuar.\n\nDetalhes: ${error.message}`);
+        app.quit();
+        return null;
+    }
+}
+
+const userStates = {}; 
+
+function buildMenu(menuData) {
+    let menuText = menuData.titulo ? `${menuData.titulo}\n\n` : '';
+    for (const key in menuData.menu) {
+        menuText += `${key} - ${menuData.menu[key].texto}\n`;
+    }
+    return menuText.trim();
+}
+
+async function handleAction(chat, action, contact) {
+    const mensagens = loadMessages();
+    if (!mensagens) return;
+
+    const actionData = mensagens[action];
+    userStates[chat.id._serialized] = action;
+
+    if (!actionData) {
+        console.error(`Ação '${action}' não encontrada.`);
+        return;
+    }
+
+    if (actionData.mensagens) {
+        for (const message of actionData.mensagens) {
+            if (message.delay) await new Promise(res => setTimeout(res, message.delay));
+            await chat.sendStateTyping();
+            if (message.tipo === 'texto') {
+                let content = Array.isArray(message.conteudo) ? message.conteudo.join('\n') : message.conteudo;
+                content = content.replace('{NOME_CLIENTE}', contact.pushname || 'amigo(a)');
+                await client.sendMessage(chat.id._serialized, content);
+            } else if (message.tipo === 'menu') {
+                await client.sendMessage(chat.id._serialized, buildMenu(message.conteudo));
+            }
+        }
+    } else {
+        const name = contact.pushname || 'amigo(a)';
+        const menuText = buildMenu(actionData).replace('{NOME_CLIENTE}', name.split(" ")[0]);
+        await chat.sendStateTyping();
+        await new Promise(res => setTimeout(res, 1000));
+        await client.sendMessage(chat.id._serialized, menuText);
+    }
+}
+
+// --- CONTROLO DO BOT ---
+
 function startBotProcess() {
-    if (isBotBusy || botProcess) {
+    if (isBotBusy || (client && client.pupPage)) {
         console.log('Operação já em andamento ou bot já iniciado.');
         return;
     }
-    
     isBotBusy = true;
     mainWindow.webContents.send('bot-status', 'starting');
+    mainWindow.webContents.send('clear-output');
+    mainWindow.webContents.send('bot-output', 'Iniciando o cliente do WhatsApp...\n');
 
-    if (mainWindow) {
-        mainWindow.webContents.send('clear-output');
-    }
-    
-    const scriptPath = getAssetPath('chatbot.js');
-    // Adiciona 'ipc' ao stdio para permitir a comunicação entre processos
-    botProcess = spawn('node', [scriptPath], { stdio: ['pipe', 'pipe', 'pipe', 'ipc'] });
-    
-    // Escuta mensagens do processo filho (chatbot.js)
-    botProcess.on('message', (message) => {
-        if (message.type === 'qr') {
-            mainWindow.webContents.send('qr-code', message.data);
-        }
-        if (message.type === 'authenticated') {
-            mainWindow.webContents.send('bot-authenticated');
+    const { Client, LocalAuth } = require('whatsapp-web.js');
+
+    client = new Client({
+        authStrategy: new LocalAuth({ dataPath: path.join(app.getPath('userData'), 'wwebjs_auth') }),
+        puppeteer: {
+            headless: true,
+            // A opção executablePath foi removida para usar o Chromium empacotado
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ],
         }
     });
 
-    botProcess.stdout.on('data', (data) => {
-        mainWindow.webContents.send('bot-output', data.toString());
+    client.on('qr', qr => {
+        mainWindow.webContents.send('qr-code', qr);
     });
-    botProcess.stderr.on('data', (data) => {
-        mainWindow.webContents.send('bot-output', `ERRO: ${data.toString()}`);
+
+    client.on('authenticated', () => {
+        mainWindow.webContents.send('bot-authenticated');
     });
-    botProcess.on('close', (code) => {
-        const message = code === 1 ? '>> O bot foi parado devido a um erro. Verifique o console. <<' : '>> O bot foi parado. <<';
-        if (mainWindow) {
-            mainWindow.webContents.send('bot-output', `\n${message}\n`);
-            mainWindow.webContents.send('bot-status', 'parado');
-        }
-        botProcess = null;
+    
+    client.on('ready', () => {
         isBotBusy = false;
+        mainWindow.webContents.send('bot-status', 'iniciado');
+        mainWindow.webContents.send('bot-output', 'Bot conectado e pronto para uso.\n');
+    });
+
+    client.on('disconnected', (reason) => {
+        isBotBusy = false;
+        mainWindow.webContents.send('bot-status', 'parado');
+        mainWindow.webContents.send('bot-output', `\n>> O bot foi desconectado. Razão: ${reason} <<\n`);
+        client = null;
+    });
+
+    client.on('auth_failure', (msg) => {
+        isBotBusy = false;
+        mainWindow.webContents.send('bot-status', 'parado');
+        mainWindow.webContents.send('bot-output', `\n>> FALHA NA AUTENTICAÇÃO: ${msg} <<\n`);
+        client = null;
     });
     
-    mainWindow.webContents.send('bot-status', 'iniciado');
-    isBotBusy = false;
-}
+    client.on('message_create', async msg => {
+        if (msg.fromMe || !msg.from.endsWith('@c.us')) return;
 
-// Função para parar o processo do bot
-function stopBotProcess() {
-    return new Promise((resolve) => {
-        if (isBotBusy || !botProcess) {
-            if (!botProcess) resolve();
-            return;
+        const chat = await msg.getChat();
+        const contact = await msg.getContact();
+        const userInput = msg.body.trim().toLowerCase();
+        const currentState = userStates[msg.from] || 'boasVindas';
+        const mensagens = loadMessages();
+
+        let currentActionData = mensagens[currentState];
+        let nextAction = null;
+
+        if (currentActionData?.menu?.[userInput]) {
+            nextAction = currentActionData.menu[userInput].acao;
+        } else if (['menu', 'oi', 'olá', 'ola'].some(k => userInput.includes(k))) {
+            nextAction = 'boasVindas';
         }
-        isBotBusy = true;
-        mainWindow.webContents.send('bot-status', 'stopping');
 
-        botProcess.on('close', () => {
-            botProcess = null;
-            isBotBusy = false;
-            resolve();
-        });
-
-        // Envia uma mensagem para o processo filho para um encerramento gracioso
-        botProcess.send('shutdown');
-
-        // Fallback para forçar o encerramento após um timeout
-        setTimeout(() => {
-            if(botProcess) {
-                botProcess.kill('SIGKILL');
+        if (nextAction) {
+            await handleAction(chat, nextAction, contact);
+            const finalActionData = mensagens[nextAction];
+            if (finalActionData && !finalActionData.menu) {
+                userStates[msg.from] = 'boasVindas';
             }
-        }, 3000);
+        }
+    });
+
+    client.initialize().catch(err => {
+        console.error('Erro na inicialização do cliente:', err);
+        mainWindow.webContents.send('bot-output', `\n>> ERRO GRAVE AO INICIAR: ${err.message} <<\n`);
+        mainWindow.webContents.send('bot-status', 'parado');
+        isBotBusy = false;
+        client = null;
     });
 }
 
+async function stopBotProcess() {
+    if (isBotBusy || !client) return Promise.resolve();
+    isBotBusy = true;
+    mainWindow.webContents.send('bot-status', 'stopping');
+    mainWindow.webContents.send('bot-output', 'Desconectando o bot...\n');
+    try {
+        await client.destroy();
+    } catch(e) {
+        console.error("Erro ao destruir cliente", e)
+    } finally {
+        isBotBusy = false;
+        client = null;
+        mainWindow.webContents.send('bot-status', 'parado');
+        mainWindow.webContents.send('bot-output', 'Bot parado com sucesso.\n');
+    }
+}
+
+
+// --- LÓGICA DO ELECTRON (Janela, Menu, IPC) ---
 
 function createMenu() {
     const menuTemplate = [
@@ -154,52 +248,34 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', async () => {
-    if (process.platform !== 'darwin') {
-        await stopBotProcess();
-        app.quit();
-    }
+    await stopBotProcess();
+    if (process.platform !== 'darwin') app.quit();
 });
-
-// --- Lógica de Comunicação com a Interface (IPC) ---
 
 ipcMain.on('start-bot', startBotProcess);
 ipcMain.on('stop-bot', stopBotProcess);
 
 ipcMain.handle('get-messages', async () => {
-    try {
-        const messagesPath = getAssetPath('mensagens.json');
-        return fs.readFileSync(messagesPath, 'utf8');
-    } catch (error) {
-        dialog.showErrorBox('Erro de Leitura', `Não foi possível ler o arquivo de mensagens: ${error.message}`);
-        return `Erro ao ler o arquivo de mensagens: ${error.message}`;
-    }
+    return fs.readFileSync(getAssetPath('mensagens.json'), 'utf8');
 });
 
 ipcMain.handle('save-messages', async (event, newMessagesString) => {
-    if (isBotBusy) {
-        return { success: false, message: 'Aguarde a operação atual do bot ser concluída.' };
-    }
-    
-    const messagesPath = getAssetPath('mensagens.json');
-    
     try {
-        mainWindow.webContents.send('bot-status', 'restarting');
-        mainWindow.webContents.send('clear-output');
-        mainWindow.webContents.send('bot-output', 'Mensagens salvas! Reiniciando o bot...');
-
-        await stopBotProcess();
-        
-        fs.writeFileSync(messagesPath, newMessagesString, 'utf8');
-        
-        startBotProcess();
-        
-        return { success: true };
+        JSON.parse(newMessagesString);
     } catch (error) {
-        return { success: false, message: `Erro ao salvar o arquivo: ${error.message}` };
+        return { success: false, message: `Erro de sintaxe no JSON: ${error.message}` };
     }
+
+    mainWindow.webContents.send('clear-output');
+    mainWindow.webContents.send('bot-output', 'Mensagens salvas! Reiniciando o bot...\n');
+    
+    await stopBotProcess();
+    
+    fs.writeFileSync(getAssetPath('mensagens.json'), newMessagesString, 'utf8');
+    
+    startBotProcess();
+    
+    return { success: true };
 });
 
-ipcMain.on('exit-app', async () => {
-    await stopBotProcess();
-    app.quit();
-});
+ipcMain.on('exit-app', () => app.quit());
