@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 
 // --- VARIÁVEIS GLOBAIS ---
 let mainWindow;
@@ -24,7 +25,7 @@ function loadMessages() {
         return JSON.parse(fs.readFileSync(messagesPath, 'utf8'));
     } catch (error) {
         console.error(`ERRO FATAL AO LER MENSAGENS: ${error.message}`);
-        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'.\n\nDetalhes: ${error.message}`);
+        dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'. O aplicativo não pode continuar.\n\nDetalhes: ${error.message}`);
         app.quit();
         return null;
     }
@@ -76,7 +77,7 @@ async function handleAction(chat, action, contact) {
 // --- CONTROLO DO BOT ---
 
 function startBotProcess() {
-    if (isBotBusy) {
+    if (isBotBusy || (client && client.pupPage)) {
         return;
     }
     isBotBusy = true;
@@ -86,13 +87,19 @@ function startBotProcess() {
     mainWindow.webContents.send('bot-output', 'Iniciando o cliente do WhatsApp...\n');
 
     try {
-        const { Client, LocalAuth } = require('whatsapp-web.js');
-
         client = new Client({
             authStrategy: new LocalAuth({ dataPath: path.join(app.getPath('userData'), 'wwebjs_auth') }),
             puppeteer: {
                 headless: true,
-                args: ['--no-sandbox', '--disable-setuid-sandbox'], // Argumentos essenciais para compatibilidade
+                args: [
+                    '--no-sandbox',
+                    '--disable-setuid-sandbox',
+                    '--disable-dev-shm-usage',
+                    '--disable-accelerated-2d-canvas',
+                    '--no-first-run',
+                    '--no-zygote',
+                    '--disable-gpu'
+                ],
             }
         });
 
