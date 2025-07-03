@@ -6,6 +6,7 @@ const startStopBtn = document.getElementById('start-stop-btn');
 const outputBox = document.getElementById('output-box');
 const editBtn = document.getElementById('edit-btn');
 const exitBtn = document.getElementById('exit-btn');
+const clearSessionBtn = document.getElementById('clear-session-btn');
 const mainView = document.getElementById('main-view');
 const editorView = document.getElementById('editor-view');
 const editorNav = document.getElementById('editor-nav');
@@ -33,6 +34,7 @@ function setMainButtonsEnabled(enabled) {
     startStopBtn.disabled = !enabled;
     editBtn.disabled = !enabled;
     exitBtn.disabled = !enabled;
+    clearSessionBtn.disabled = !enabled;
 }
 
 function showToast(message, type = 'success') {
@@ -45,11 +47,8 @@ function showToast(message, type = 'success') {
     }, 5000);
 }
 
-// --- Editor Visual (Versão Final) ---
+// --- Editor Visual ---
 
-/**
- * Converte uma chave de objeto para um título legível.
- */
 function formatLabel(key) {
     return key
         .replace(/_/g, ' ')
@@ -58,14 +57,7 @@ function formatLabel(key) {
         .trim();
 }
 
-/**
- * Cria os campos de formulário para uma categoria específica.
- * @param {HTMLElement} container - O elemento onde os campos serão inseridos.
- * @param {object} data - O objeto de dados da categoria.
- * @param {string} parentPath - O caminho para o objeto pai.
- */
 function buildFormFields(container, data, parentPath) {
-    // Se a categoria tem um array 'mensagens' (como 'resposta_outros' ou 'submenu_nossosPlanos')
     if (data.mensagens && Array.isArray(data.mensagens)) {
         data.mensagens.forEach((msg, index) => {
             if (msg.tipo === 'texto') {
@@ -74,12 +66,10 @@ function buildFormFields(container, data, parentPath) {
                 group.className = 'form-group';
 
                 const label = document.createElement('label');
-                // Se houver mais de uma mensagem, numera os blocos
                 label.textContent = data.mensagens.length > 1 ? `Bloco de Texto ${index + 1}` : 'Conteúdo da Resposta';
                 group.appendChild(label);
 
                 const textarea = document.createElement('textarea');
-                // O conteúdo pode ser um array de strings ou uma única string
                 const contentValue = Array.isArray(msg.conteudo) ? msg.conteudo.join('\n') : msg.conteudo;
                 const isArray = Array.isArray(msg.conteudo);
 
@@ -95,7 +85,6 @@ function buildFormFields(container, data, parentPath) {
         return;
     }
 
-    // Lógica para outras categorias que não têm um array 'mensagens'
     for (const key in data) {
         const value = data[key];
         const currentPath = `${parentPath}.${key}`;
@@ -124,23 +113,16 @@ function buildFormFields(container, data, parentPath) {
     }
 }
 
-
-/**
- * Define um valor em um objeto aninhado usando um caminho de string (ex: 'a.b.c').
- */
 function setNestedValue(obj, path, value) {
     const keys = path.split('.');
     let current = obj;
     for (let i = 0; i < keys.length - 1; i++) {
-        if (current[keys[i]] === undefined) return; // Caminho não existe, interrompe
+        if (current[keys[i]] === undefined) return;
         current = current[keys[i]];
     }
     current[keys[keys.length - 1]] = value;
 }
 
-/**
- * Exibe o formulário para a categoria selecionada.
- */
 function displayCategoryForm(categoryKey) {
     editorContent.innerHTML = '';
     
@@ -154,9 +136,6 @@ function displayCategoryForm(categoryKey) {
     }
 }
 
-/**
- * Popula o menu de navegação e exibe o primeiro formulário.
- */
 function populateVisualEditor(messagesString) {
     editorNav.innerHTML = '';
     editorContent.innerHTML = '';
@@ -197,6 +176,10 @@ editBtn.addEventListener('click', async () => {
     } catch (error) {
         showToast(`Erro ao carregar mensagens: ${error.message}`, 'error');
     }
+});
+
+clearSessionBtn.addEventListener('click', () => {
+    ipcRenderer.send('clear-session');
 });
 
 saveBtn.addEventListener('click', async () => {

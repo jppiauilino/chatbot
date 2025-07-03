@@ -8,19 +8,11 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 let mainWindow;
 let client;
 let isBotBusy = false;
+let MENSAGENS_BOT = {}; // Armazena as mensagens em memória para acesso rápido
 
 // --- GESTÃO DE ARQUIVOS DE CONFIGURAÇÃO ---
 const userDataPath = app.getPath('userData');
 const messagesFilePath = path.join(userDataPath, 'mensagens.json');
-
-function getPuppeteerPath() {
-    if (app.isPackaged) {
-        return path.join(process.resourcesPath, 'puppeteer', 'chrome-win', 'chrome.exe');
-    }
-    // Em desenvolvimento, use a versão do puppeteer em node_modules
-    const puppeteer = require('puppeteer');
-    return puppeteer.executablePath();
-}
 
 function ensureMessagesFileExists() {
     if (!fs.existsSync(messagesFilePath)) {
@@ -39,12 +31,14 @@ function ensureMessagesFileExists() {
 
 function loadMessages() {
     try {
-        return JSON.parse(fs.readFileSync(messagesFilePath, 'utf8'));
+        const fileContent = fs.readFileSync(messagesFilePath, 'utf8');
+        MENSAGENS_BOT = JSON.parse(fileContent); // Carrega as mensagens para a variável global
+        return true;
     } catch (error) {
         console.error(`ERRO FATAL AO LER MENSAGENS: ${error.message}`);
         dialog.showErrorBox('Erro Crítico', `Não foi possível ler o arquivo 'mensagens.json'.\n\nDetalhes: ${error.message}`);
         app.quit();
-        return null;
+        return false;
     }
 }
 
@@ -59,10 +53,7 @@ function buildMenu(menuData) {
 }
 
 async function handleAction(chat, action, contact) {
-    const mensagens = loadMessages();
-    if (!mensagens) return;
-
-    const actionData = mensagens[action];
+    const actionData = MENSAGENS_BOT[action];
     userStates[chat.id._serialized] = action;
 
     if (!actionData) {
@@ -97,17 +88,21 @@ function startBotProcess() {
     if (isBotBusy || (client && client.pupPage)) {
         return;
     }
-    isBotBusy = true;
 
+    if (!loadMessages()) return;
+
+    isBotBusy = true;
     mainWindow.webContents.send('bot-status', 'starting');
     mainWindow.webContents.send('clear-output');
     mainWindow.webContents.send('bot-output', 'Iniciando o cliente do WhatsApp...\n');
 
     try {
+        const puppeteer = require('puppeteer');
+        
         client = new Client({
             authStrategy: new LocalAuth({ dataPath: path.join(userDataPath, 'wwebjs_auth') }),
             puppeteer: {
-                executablePath: getPuppeteerPath(),
+                executablePath: puppeteer.executablePath(),
                 headless: true,
                 args: [
                     '--no-sandbox',
@@ -156,22 +151,20 @@ function startBotProcess() {
             const contact = await msg.getContact();
             const userInput = msg.body.trim().toLowerCase();
             const currentState = userStates[msg.from] || 'boasVindas';
-            const mensagens = loadMessages();
-
-            if (!mensagens) return;
-
-            let currentActionData = mensagens[currentState];
+            
+            let currentActionData = MENSAGENS_BOT[currentState];
             let nextAction = null;
 
             if (currentActionData?.menu?.[userInput]) {
                 nextAction = currentActionData.menu[userInput].acao;
-            } else if (['menu', 'oi', 'olá', 'ola'].some(k => userInput.includes(k))) {
+            } 
+            else if (['menu', 'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'opa'].some(k => userInput.includes(k))) {
                 nextAction = 'boasVindas';
             }
 
             if (nextAction) {
                 await handleAction(chat, nextAction, contact);
-                const finalActionData = mensagens[nextAction];
+                const finalActionData = MENSAGENS_BOT[nextAction];
                 if (finalActionData && !finalActionData.menu) {
                     userStates[msg.from] = 'boasVindas';
                 }
@@ -284,6 +277,36 @@ app.on('window-all-closed', async () => {
 ipcMain.on('start-bot', startBotProcess);
 ipcMain.on('stop-bot', stopBotProcess);
 
+ipcMain.on('clear-session', async () => {
+    await stopBotProcess();
+    const sessionPath = path.join(userDataPath, 'wwebjs_auth');
+    
+    if (fs.existsSync(sessionPath)) {
+        try {
+            fs.rmSync(sessionPath, { recursive: true, force: true });
+            dialog.showMessageBox(mainWindow, {
+                type: 'info',
+                title: 'Sessão Limpa',
+                message: 'A sessão do WhatsApp foi limpa com sucesso. O aplicativo será reiniciado.'
+            }).then(() => {
+                app.relaunch();
+                app.quit();
+            });
+        } catch (error) {
+            dialog.showErrorBox('Erro ao Limpar Sessão', `Não foi possível deletar a pasta da sessão.\n\nDetalhes: ${error.message}`);
+        }
+    } else {
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Sessão Limpa',
+            message: 'Nenhuma sessão ativa encontrada. O aplicativo será reiniciado.'
+        }).then(() => {
+            app.relaunch();
+            app.quit();
+        });
+    }
+});
+
 ipcMain.handle('get-messages', async () => {
     return fs.readFileSync(messagesFilePath, 'utf8');
 });
@@ -291,18 +314,13 @@ ipcMain.handle('get-messages', async () => {
 ipcMain.handle('save-messages', async (event, newMessagesString) => {
     try {
         const parsedJSON = JSON.parse(newMessagesString);
-
         mainWindow.webContents.send('clear-output');
         mainWindow.webContents.send('bot-output', 'Salvando mensagens e reiniciando o bot...\n');
-
         await stopBotProcess();
-
         fs.writeFileSync(messagesFilePath, JSON.stringify(parsedJSON, null, 2), 'utf8');
-
+        MENSAGENS_BOT = parsedJSON; 
         await new Promise(resolve => setTimeout(resolve, 500));
-
         startBotProcess();
-
         return { success: true };
     } catch (error) {
         console.error("Erro ao salvar mensagens:", error);

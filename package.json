@@ -1,11 +1,10 @@
 {
   "name": "chatbot-whatsapp-painel",
-  "version": "3.3.0",
-  "description": "Painel de Controle aprimorado para o ChatBot de WhatsApp.",
+  "version": "3.9.0",
+  "description": "Chatbot para WhatsApp",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "postinstall": "electron-builder install-app-deps",
     "build": "electron-builder",
     "dist": "electron-builder --publish always"
   },
@@ -14,7 +13,7 @@
     "chatbot",
     "electron"
   ],
-  "author": "Seu Nome",
+  "author": "JoJo",
   "license": "MIT",
   "dependencies": {
     "electron-updater": "^6.1.7",
@@ -32,12 +31,7 @@
       "target": "nsis",
       "icon": "build/icon.ico"
     },
-    "extraResources": [
-      {
-        "from": "node_modules/puppeteer/.local-chromium",
-        "to": "puppeteer"
-      }
-    ],
+    "asar": false,
     "directories": {
       "output": "dist"
     }
