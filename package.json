@@ -1,6 +1,6 @@
 {
   "name": "chatbot-whatsapp-painel",
-  "version": "3.9.0",
+  "version": "4.0.0",
   "description": "Chatbot para WhatsApp",
   "main": "main.js",
   "scripts": {

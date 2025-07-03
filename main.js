@@ -158,6 +158,10 @@ function startBotProcess() {
             if (currentActionData?.menu?.[userInput]) {
                 nextAction = currentActionData.menu[userInput].acao;
             } 
+            // >>>>>>>> LÓGICA ADICIONADA AQUI <<<<<<<<<<
+            else if (userInput === '0') {
+                nextAction = 'boasVindas';
+            }
             else if (['menu', 'oi', 'olá', 'ola', 'bom dia', 'boa tarde', 'boa noite', 'opa'].some(k => userInput.includes(k))) {
                 nextAction = 'boasVindas';
             }
