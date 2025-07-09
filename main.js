@@ -8,9 +8,9 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 let mainWindow;
 let client;
 let isBotBusy = false;
-let MENSAGENS_BOT = {}; // Armazena as mensagens em memória para acesso rápido
+let MENSAGENS_BOT = {};
 
-// --- GESTÃO DE ARQUIVOS DE CONFIGURAÇÃO ---
+// ---ARQUIVOS DE CONFIGURAÇÃO ---
 const userDataPath = app.getPath('userData');
 const messagesFilePath = path.join(userDataPath, 'mensagens.json');
 
@@ -82,7 +82,7 @@ async function handleAction(chat, action, contact) {
     }
 }
 
-// --- CONTROLO DO BOT ---
+// --- CONTROLES DO BOT ---
 
 function startBotProcess() {
     if (isBotBusy || (client && client.pupPage)) {
@@ -158,7 +158,6 @@ function startBotProcess() {
             if (currentActionData?.menu?.[userInput]) {
                 nextAction = currentActionData.menu[userInput].acao;
             } 
-            // >>>>>>>> LÓGICA ADICIONADA AQUI <<<<<<<<<<
             else if (userInput === '0') {
                 nextAction = 'boasVindas';
             }
@@ -211,7 +210,7 @@ async function stopBotProcess() {
     }
 }
 
-// --- LÓGICA DO ELECTRON (Janela, Menu, IPC) ---
+//ELECTRON---
 
 function createMenu() {
     const menuTemplate = [
