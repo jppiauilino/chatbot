@@ -1,6 +1,6 @@
 {
   "name": "chatbot-whatsapp-painel",
-  "version": "4.0.0",
+  "version": "4.1.0",
   "description": "Chatbot para WhatsApp",
   "main": "main.js",
   "scripts": {
@@ -17,6 +17,7 @@
   "license": "MIT",
   "dependencies": {
     "electron-updater": "^6.1.7",
+    "pg": "^8.11.3",
     "qrcode": "^1.5.3",
     "whatsapp-web.js": "^1.23.0"
   },
@@ -31,9 +32,15 @@
       "target": "nsis",
       "icon": "build/icon.ico"
     },
-    "asar": false,
+    "asar": true,
     "directories": {
       "output": "dist"
-    }
+    },
+    "extraFiles": [
+      {
+        "from": "licenca.json",
+        "to": "."
+      }
+    ]
   }
 }

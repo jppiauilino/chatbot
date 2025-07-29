@@ -5,7 +5,8 @@
       "1": { "texto": "Conheça nossos planos", "acao": "submenu_nossosPlanos" },
       "2": { "texto": "Setor Financeiro", "acao": "submenu_setorFinanceiro" },
       "3": { "texto": "Ajuda com a plataforma", "acao": "submenu_ajuda" },
-      "4": { "texto": "Agendar serviços", "acao": "submenu_agendar" }
+      "4": { "texto": "Agendar serviços", "acao": "submenu_agendar" },
+      "5": { "texto": "Outros", "acao": "resposta_outros" }
     }
   },
   "submenu_nossosPlanos": {

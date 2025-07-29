@@ -30,7 +30,7 @@ body {
 
 .container {
     width: 95%;
-    max-width: 900px;
+    max-width: 1200px;
     height: 95%;
     display: flex;
     flex-direction: column;
@@ -45,14 +45,35 @@ h1, h2 {
     text-align: center;
     color: var(--text-color);
     flex-shrink: 0;
-    margin-top: 0;
 }
 
-/* --- Visão Principal --- */
-#main-view {
+h1 { margin-top: 0; }
+
+.controls-header {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 25px;
+}
+
+.bots-container {
+    display: flex;
+    gap: 20px;
+    flex-grow: 1;
+}
+
+.bot-instance {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    height: 100%;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    background-color: #fdfdfd;
+}
+
+.bot-instance h2 {
+    margin-top: 0;
 }
 
 .main-controls {
@@ -83,7 +104,7 @@ button:disabled {
     opacity: 0.6;
 }
 
-#start-stop-btn { background-color: var(--primary-blue); color: var(--white); }
+button[id^="start-stop-btn-"] { background-color: var(--primary-blue); color: var(--white); }
 #edit-btn { background-color: #6c757d; color: var(--white); }
 #exit-btn { background-color: var(--danger-red); color: var(--white); }
 .btn-warning { background-color: #ffc107; color: var(--text-color); }
@@ -102,7 +123,7 @@ button:disabled {
     justify-content: flex-start;
 }
 
-pre {
+pre.output-box {
     width: 100%;
     white-space: pre-wrap;
     font-family: "Consolas", "Courier New", monospace;
@@ -112,7 +133,7 @@ pre {
     text-align: left;
 }
 
-#qrcode-container {
+.qrcode-container {
     padding: 10px;
     background-color: var(--white);
     border-radius: 8px;
@@ -120,11 +141,10 @@ pre {
     display: none;
 }
 
-#qrcode-container img {
+.qrcode-container img {
     display: block;
     margin: 0 auto;
 }
-
 
 /* --- Editor de Mensagens --- */
 .hidden {
@@ -214,17 +234,27 @@ pre {
     margin-bottom: 10px;
 }
 
+/* ALTERAÇÃO AQUI */
 .form-group textarea {
     width: 100%;
     padding: 12px;
     border: 1px solid var(--border-color);
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 15px; /* Aumentado */
     box-sizing: border-box;
-    min-height: 150px;
+    min-height: 200px; /* Aumentado de 150px para 200px */
     resize: vertical;
 }
 
+/* NOVA REGRA ADICIONADA AQUI */
+.form-group input[type="text"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 15px; /* Aumentado */
+    box-sizing: border-box;
+}
 
 /* --- Notificações Toast --- */
 #toast-container {

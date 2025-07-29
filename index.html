@@ -8,18 +8,38 @@
 <body>
     <div id="toast-container"></div>
     <div class="container">
-        
         <div id="main-view">
             <h1>Painel de Controle do Chatbot</h1>
-            <div class="main-controls">
-                <button id="start-stop-btn">▶️ Iniciar Bot</button>
+            
+            <div class="controls-header">
                 <button id="edit-btn">✏️ Editar Respostas</button>
-                <button id="clear-session-btn" class="btn-warning">🔄 Limpar Sessão</button>
                 <button id="exit-btn">❌ Sair</button>
             </div>
-            <div class="status-box">
-                <div id="qrcode-container"></div>
-                <pre id="output-box">O bot está inativo. Clique em 'Iniciar' para começar.</pre>
+
+            <div class="bots-container">
+                <div id="bot1-container" class="bot-instance">
+                    <h2>Bot 1</h2>
+                    <div class="main-controls">
+                        <button id="start-stop-btn-bot1" data-bot-id="bot1">▶️ Iniciar Bot</button>
+                        <button id="clear-session-btn-bot1" class="btn-warning" data-bot-id="bot1">🔄 Limpar Sessão</button>
+                    </div>
+                    <div class="status-box">
+                        <div id="qrcode-container-bot1" class="qrcode-container"></div>
+                        <pre id="output-box-bot1" class="output-box">O bot está inativo. Clique em 'Iniciar' para começar.</pre>
+                    </div>
+                </div>
+
+                <div id="bot2-container" class="bot-instance">
+                    <h2>Bot 2</h2>
+                    <div class="main-controls">
+                        <button id="start-stop-btn-bot2" data-bot-id="bot2">▶️ Iniciar Bot</button>
+                        <button id="clear-session-btn-bot2" class="btn-warning" data-bot-id="bot2">🔄 Limpar Sessão</button>
+                    </div>
+                    <div class="status-box">
+                        <div id="qrcode-container-bot2" class="qrcode-container"></div>
+                        <pre id="output-box-bot2" class="output-box">O bot está inativo. Clique em 'Iniciar' para começar.</pre>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -27,7 +47,7 @@
             <div class="editor-header">
                  <h2>Editor de Mensagens</h2>
                  <div class="editor-controls">
-                    <button id="save-btn">Salvar e Reiniciar</button>
+                    <button id="save-btn">Salvar Alterações</button>
                     <button id="cancel-btn">Voltar ao Painel</button>
                 </div>
             </div>
